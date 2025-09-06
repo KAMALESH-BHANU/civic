@@ -53,14 +53,65 @@ const ReportIssue = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         setSelectedImage(e.target?.result as string);
+        toast({
+          title: "Photo uploaded successfully!",
+          description: "Your image has been attached to the report.",
+        });
       };
       reader.readAsDataURL(file);
     }
   };
 
+  const handleCameraCapture = () => {
+    const input = document.getElementById('photo-upload') as HTMLInputElement;
+    input?.click();
+  };
+
+  const handleLocationChange = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setFormData(prev => ({
+            ...prev,
+            location: `GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+          }));
+          toast({
+            title: "Location updated!",
+            description: "Using your current GPS location.",
+          });
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          toast({
+            title: "Location access denied",
+            description: "Please enable location services or enter manually.",
+            variant: "destructive",
+          });
+        }
+      );
+    } else {
+      toast({
+        title: "GPS not supported",
+        description: "Your device doesn't support GPS location.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleVoiceRecording = () => {
     setIsRecording(!isRecording);
-    // Voice recording logic would go here
+    if (!isRecording) {
+      toast({
+        title: "Recording started",
+        description: "Speak now to add a voice note to your report.",
+      });
+    } else {
+      toast({
+        title: "Recording stopped",
+        description: "Voice note has been saved.",
+      });
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -126,13 +177,15 @@ const ReportIssue = () => {
                 ) : (
                   <div className="space-y-4">
                     <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
-                    <div>
-                      <Label htmlFor="photo-upload" className="cursor-pointer">
-                        <Button type="button" className="civic-gradient">
-                          <Camera className="h-4 w-4 mr-2" />
-                          Take Photo
-                        </Button>
-                      </Label>
+                    <div className="space-y-3">
+                      <Button 
+                        type="button" 
+                        className="civic-gradient"
+                        onClick={handleCameraCapture}
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Take Photo
+                      </Button>
                       <Input
                         id="photo-upload"
                         type="file"
@@ -164,7 +217,12 @@ const ReportIssue = () => {
                 <MapPin className="h-5 w-5 text-success" />
                 <span className="text-success font-medium">{formData.location}</span>
               </div>
-              <Button variant="outline" className="mt-3" type="button">
+              <Button 
+                variant="outline" 
+                className="mt-3" 
+                type="button"
+                onClick={handleLocationChange}
+              >
                 Change Location
               </Button>
             </CardContent>

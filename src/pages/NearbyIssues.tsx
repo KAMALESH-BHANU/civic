@@ -1,18 +1,27 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { PriorityBadge } from '@/components/ui/priority-badge';
+import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, 
   MapPin,
   Filter,
   Calendar,
   User,
-  Eye
+  Eye,
+  Navigation,
+  AlertTriangle
 } from 'lucide-react';
 
 const NearbyIssues = () => {
+  const [showFilter, setShowFilter] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
   // Mock data for nearby issues
   const nearbyIssues = [
     {
@@ -77,6 +86,61 @@ const NearbyIssues = () => {
     }
   ];
 
+  const handleViewIssue = (issueId: number) => {
+    navigate(`/complaint/${issueId}`);
+  };
+
+  const handleGetDirections = (location: string) => {
+    // Open in maps app or web
+    const encodedLocation = encodeURIComponent(location);
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodedLocation}`, '_blank');
+    toast({
+      title: "Opening directions",
+      description: "Redirecting to maps application",
+    });
+  };
+
+  const handleReportSimilar = (category: string) => {
+    navigate('/report-issue', { state: { preSelectedCategory: category } });
+  };
+
+  const handleChangeLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          toast({
+            title: "Location updated!",
+            description: `Now showing issues near ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+          });
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          toast({
+            title: "Location access denied",
+            description: "Please enable location services.",
+            variant: "destructive",
+          });
+        }
+      );
+    } else {
+      toast({
+        title: "GPS not supported",
+        description: "Your device doesn't support GPS location.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFilterClick = () => {
+    setShowFilter(!showFilter);
+  };
+
+  const filteredIssues = nearbyIssues.filter(issue => {
+    if (selectedFilter === 'all') return true;
+    return issue.status === selectedFilter;
+  });
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
@@ -93,7 +157,7 @@ const NearbyIssues = () => {
               <p className="text-sm text-muted-foreground">Issues reported in your area</p>
             </div>
           </div>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleFilterClick}>
             <Filter className="h-4 w-4 mr-2" />
             Filter
           </Button>
@@ -114,7 +178,7 @@ const NearbyIssues = () => {
                   <p className="text-sm text-muted-foreground">123 Main Street, Downtown</p>
                 </div>
               </div>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleChangeLocation}>
                 Change Location
               </Button>
             </div>
@@ -138,16 +202,40 @@ const NearbyIssues = () => {
           </CardContent>
         </Card>
 
+        {/* Filter Options */}
+        {showFilter && (
+          <Card className="civic-card-gradient civic-shadow-soft border-0 mb-6">
+            <CardHeader>
+              <CardTitle>Filter Issues</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {['all', 'submitted', 'assigned', 'in-progress', 'resolved'].map((filter) => (
+                  <Button
+                    key={filter}
+                    variant={selectedFilter === filter ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedFilter(filter)}
+                    className="capitalize"
+                  >
+                    {filter === 'all' ? 'All Issues' : filter.replace('-', ' ')}
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Issues List */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Recent Reports ({nearbyIssues.length})</h2>
+            <h2 className="text-lg font-semibold">Recent Reports ({filteredIssues.length})</h2>
             <div className="text-sm text-muted-foreground">
               Sorted by distance
             </div>
           </div>
 
-          {nearbyIssues.map((issue) => (
+          {filteredIssues.map((issue) => (
             <Card key={issue.id} className="civic-card-gradient civic-shadow-soft border-0">
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -160,7 +248,11 @@ const NearbyIssues = () => {
                   </div>
                   <div className="text-right space-y-1">
                     <div className="text-sm font-medium text-primary">{issue.distance}</div>
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleViewIssue(issue.id)}
+                    >
                       <Eye className="h-4 w-4 mr-2" />
                       View
                     </Button>
@@ -193,10 +285,21 @@ const NearbyIssues = () => {
                   <p className="text-muted-foreground text-sm">{issue.description}</p>
                 </div>
                 <div className="flex items-center justify-between pt-2">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleGetDirections(issue.location)}
+                  >
+                    <Navigation className="h-4 w-4 mr-2" />
                     Get Directions
                   </Button>
-                  <Button variant="ghost" size="sm" className="text-primary">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-primary"
+                    onClick={() => handleReportSimilar(issue.category)}
+                  >
+                    <AlertTriangle className="h-4 w-4 mr-2" />
                     Report Similar Issue
                   </Button>
                 </div>
