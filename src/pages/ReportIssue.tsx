@@ -24,6 +24,7 @@ const ReportIssue = () => {
 
   const webcamRef = useRef<Webcam>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null); // ✅ for gallery upload
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -70,7 +71,7 @@ const ReportIssue = () => {
     }
   };
 
-  // Gallery upload
+  // ✅ Gallery upload
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -129,7 +130,6 @@ const ReportIssue = () => {
             interimTranscript += transcriptPiece; // live interim
           }
         }
-        // Show final + interim together
         setFormData(prev => ({ ...prev, description: finalTranscript + interimTranscript }));
       };
 
@@ -140,7 +140,7 @@ const ReportIssue = () => {
       recognitionRef.current?.stop();
       setIsRecording(false);
       toast({ title: "Recording stopped", description: "Voice note added to description." });
-      setFormData(prev => ({ ...prev, description: finalTranscript })); // save final text
+      setFormData(prev => ({ ...prev, description: finalTranscript }));
     }
   };
 
@@ -170,7 +170,7 @@ const ReportIssue = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
 
           {/* Photo Upload */}
-          <Card className="civic-card-gradient civic-shadow-soft border-0">
+          <Card className="civic-card-gradient civic-shadow-soft border-0" >
             <CardHeader>
               <CardTitle className="flex items-center space-x-2"><Camera className="h-5 w-5" /><span>Upload Photo</span></CardTitle>
               <CardDescription>Take a photo or upload from gallery</CardDescription>
@@ -190,10 +190,22 @@ const ReportIssue = () => {
                         <Camera className="h-4 w-4 mr-2" /> Take Photo
                       </Button>
                       <div>
-                        <input id="photo-upload" type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                        <label htmlFor="photo-upload" className="w-full inline-block">
-                          <Button type="button" className="w-full civic-gradient">Select from Gallery</Button>
-                        </label>
+                        {/* ✅ Fixed Gallery Upload */}
+                        <input
+                          ref={fileInputRef}
+                          id="photo-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                        <Button
+                          type="button"
+                          className="w-full civic-gradient"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          Select from Gallery
+                        </Button>
                       </div>
                     </div>
                   </div>
